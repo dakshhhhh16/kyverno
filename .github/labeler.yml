@@ -293,7 +293,7 @@
       - any-glob-to-any-file:
           - "test/cli/**"
 
-"kind/documentation":
+"documentation":
   - changed-files:
       - any-glob-to-any-file:
           - "docs/**"
