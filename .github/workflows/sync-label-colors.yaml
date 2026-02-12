@@ -1,0 +1,153 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+
+name: Sync Label Colors
+
+# One-time / on-demand workflow to create or update label colors.
+# Run manually from Actions → Sync Label Colors → Run workflow.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  sync-labels:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create or update labels with colors
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            // ─── Color palette ─────────────────────────────────────────
+            // area/*   → shades of blue / teal  (engine-related darker)
+            // kind/*   → shades of purple / magenta
+            // spam     → red
+            // merge-conflicts → orange-red
+
+            const labels = [
+              // ── Area: Core Engine (deep blue) ──────────────────────────
+              { name: "area/engine",      color: "0052cc", description: "Policy engine core" },
+              { name: "area/validation",  color: "0052cc", description: "Validation logic" },
+              { name: "area/mutation",    color: "0052cc", description: "Mutation logic" },
+              { name: "area/generation",  color: "0052cc", description: "Generation / background rules" },
+
+              // ── Area: Image Verification (indigo) ─────────────────────
+              { name: "area/image-verify", color: "3F51B5", description: "Image verification" },
+              { name: "area/cosign",       color: "3F51B5", description: "Cosign integration" },
+              { name: "area/notary",       color: "3F51B5", description: "Notary integration" },
+
+              // ── Area: API & CRDs (sky blue) ───────────────────────────
+              { name: "area/api",   color: "1d76db", description: "API type definitions" },
+              { name: "area/crds",  color: "1d76db", description: "CRD manifests" },
+
+              // ── Area: CEL (cyan) ──────────────────────────────────────
+              { name: "area/cel",   color: "00BCD4", description: "CEL expressions / engine" },
+
+              // ── Area: Webhooks & Controllers (teal) ───────────────────
+              { name: "area/webhooks",              color: "009688", description: "Webhook handlers" },
+              { name: "area/controllers",           color: "009688", description: "Controller logic" },
+              { name: "area/background-controller", color: "009688", description: "Background controller" },
+              { name: "area/cleanup-controller",    color: "009688", description: "Cleanup controller" },
+              { name: "area/reports-controller",    color: "009688", description: "Reports controller" },
+
+              // ── Area: CLI (green-teal) ────────────────────────────────
+              { name: "area/cli",  color: "0e8a16", description: "kubectl-kyverno CLI" },
+
+              // ── Area: Policy (sea green) ──────────────────────────────
+              { name: "area/policy",           color: "2E7D32", description: "Policy / policy cache" },
+              { name: "area/exceptions",       color: "2E7D32", description: "Policy exceptions" },
+              { name: "area/admission-policy", color: "2E7D32", description: "Admission policy" },
+
+              // ── Area: Autogen (light green) ───────────────────────────
+              { name: "area/autogen", color: "4CAF50", description: "Autogen rules" },
+
+              // ── Area: Global Context (olive) ──────────────────────────
+              { name: "area/global-context", color: "827717", description: "Global context entries" },
+
+              // ── Area: Events (amber) ──────────────────────────────────
+              { name: "area/events", color: "FFA000", description: "Event recording" },
+
+              // ── Area: Auth, TLS, Security (steel blue) ────────────────
+              { name: "area/auth", color: "5C6BC0", description: "Auth / user-info" },
+              { name: "area/tls",  color: "5C6BC0", description: "TLS / certificates" },
+
+              // ── Area: Observability (light blue) ──────────────────────
+              { name: "area/metrics", color: "42A5F5", description: "Metrics" },
+              { name: "area/tracing", color: "42A5F5", description: "Tracing / OpenTelemetry" },
+              { name: "area/logging", color: "42A5F5", description: "Logging" },
+
+              // ── Area: Config & Registry (grey-blue) ───────────────────
+              { name: "area/config",   color: "546E7A", description: "Kyverno config" },
+              { name: "area/registry", color: "546E7A", description: "Registry client" },
+
+              // ── Area: Infrastructure (blue-grey) ──────────────────────
+              { name: "area/clients",         color: "607D8B", description: "Generated / wrapped clients" },
+              { name: "area/pss",             color: "607D8B", description: "Pod Security Standards" },
+              { name: "area/ext",             color: "607D8B", description: "Ext utility packages" },
+              { name: "area/toggle",          color: "607D8B", description: "Feature flags / toggles" },
+              { name: "area/leader-election", color: "607D8B", description: "Leader election" },
+              { name: "area/breaker",         color: "607D8B", description: "Circuit breaker" },
+              { name: "area/cmd-internal",    color: "607D8B", description: "cmd/internal shared setup" },
+              { name: "area/init-container",  color: "607D8B", description: "Init container" },
+              { name: "area/readiness",       color: "607D8B", description: "Readiness checker" },
+
+              // ── Kind: Helm (purple) ───────────────────────────────────
+              { name: "kind/helm",          color: "7B1FA2", description: "Helm charts" },
+              { name: "kind/helm-kyverno",  color: "7B1FA2", description: "Kyverno Helm chart" },
+              { name: "kind/helm-policies", color: "7B1FA2", description: "Kyverno-policies Helm chart" },
+
+              // ── Kind: Tests (magenta) ─────────────────────────────────
+              { name: "kind/tests",      color: "D81B60", description: "Unit / integration tests" },
+              { name: "kind/e2e-tests",  color: "D81B60", description: "E2E / Chainsaw tests" },
+              { name: "kind/cli-tests",  color: "D81B60", description: "CLI tests" },
+
+              // ── Kind: Docs (light purple) ─────────────────────────────
+              { name: "kind/documentation", color: "CE93D8", description: "Documentation changes" },
+
+              // ── Kind: CI & Build (dark magenta) ───────────────────────
+              { name: "kind/ci",      color: "8E24AA", description: "CI / GitHub Actions" },
+              { name: "kind/codegen", color: "8E24AA", description: "Code generation / scripts" },
+
+              // ── Kind: Dependencies (brown) ────────────────────────────
+              { name: "kind/dependencies", color: "795548", description: "go.mod / go.sum changes" },
+
+              // ── Kind: Security (dark red) ─────────────────────────────
+              { name: "kind/security", color: "B71C1C", description: "Security-related changes" },
+
+              // ── Kind: Config (plum) ───────────────────────────────────
+              { name: "kind/config", color: "6A1B9A", description: "Config manifests (non-CRD)" },
+
+              // ── Special labels ────────────────────────────────────────
+              { name: "spam",             color: "e11d48", description: "Suspected spam / PR burst" },
+              { name: "merge-conflicts",  color: "E65100", description: "PR has merge conflicts" },
+            ];
+
+            for (const label of labels) {
+              try {
+                await github.rest.issues.updateLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name: label.name,
+                  color: label.color,
+                  description: label.description,
+                });
+                core.info(`Updated label: ${label.name}`);
+              } catch (e) {
+                if (e.status === 404) {
+                  await github.rest.issues.createLabel({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    name: label.name,
+                    color: label.color,
+                    description: label.description,
+                  });
+                  core.info(`Created label: ${label.name}`);
+                } else {
+                  core.warning(`Failed to sync label "${label.name}": ${e.message}`);
+                }
+              }
+            }
+
+            core.info(`Done — synced ${labels.length} labels.`);
