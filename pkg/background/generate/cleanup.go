@@ -3,6 +3,7 @@ package generate
 import (
 	"context"
 	"fmt"
+	"maps"
 
 	"github.com/kyverno/kyverno/api/kyverno"
 	kyvernov1 "github.com/kyverno/kyverno/api/kyverno/v1"
@@ -108,14 +109,27 @@ func (c *GenerateController) getDownstreams(rule kyvernov1.Rule, selector map[st
 	selector[common.GenerateTriggerGroupLabel] = gv.Group
 	selector[common.GenerateTriggerVersionLabel] = gv.Version
 
-	for _, g := range rule.Generation.ForEachGeneration {
-		return c.fetch(g.GeneratePattern, selector, ruleContext)
+	if len(rule.Generation.ForEachGeneration) > 0 {
+		var allDownstreams []unstructured.Unstructured
+		var errs []error
+		for _, g := range rule.Generation.ForEachGeneration {
+			downstreams, err := c.fetch(g.GeneratePattern, selector, ruleContext)
+			if err != nil {
+				errs = append(errs, err)
+				continue
+			}
+			allDownstreams = append(allDownstreams, downstreams...)
+		}
+		return allDownstreams, multierr.Combine(errs...)
 	}
 
 	return c.fetch(rule.Generation.GeneratePattern, selector, ruleContext)
 }
 
 func (c *GenerateController) fetch(generatePattern kyvernov1.GeneratePattern, selector map[string]string, ruleContext *kyvernov2.RuleContext) ([]unstructured.Unstructured, error) {
+	// Create a local copy to avoid mutating the caller's selector
+	// (the UID->Name fallback below deletes/adds keys).
+	selector = maps.Clone(selector)
 	downstreamResources := []unstructured.Unstructured{}
 	if generatePattern.GetKind() != "" {
 		// Fetch downstream resources using trigger uid label
